@@ -1,12 +1,13 @@
 "use strict";
 
-// assign the global request module from browser-request.js
-
 var MatrixBlog = function(settings) {
     var self = this;
+    
+    // assign the global request module from browser-request.js
     matrixcs.request(request);
 
     this.settings = settings;
+    this.settings.locale = this.settings.locale || 'nb-NO';
     this.client = matrixcs.createClient({
         baseUrl: settings.homeServer,
         // Can be removed in future when public channels can be read without it
@@ -19,12 +20,14 @@ var MatrixBlog = function(settings) {
     this.$posts = $('<ul class="posts">');
     this.$people = $('<ul class="people">');
 
+    // turn @blog:h4x.no into !AAibyqyZfUWhPUliDe:h4x.no to fetch inital state
     this.client.resolveRoomAlias(this.settings.room, function (err, data) {
         var $root = $(self.settings.selector);
         self.roomId = data.room_id;
 
         // client.sendTyping(roomId, true, 5000, function (err, data) {})
 
+        // fetch the last 50 events from our room as inital state
         self.client.initialSync(50, function (err, data) {
             $root.empty();
             $root.append(self.$people);
@@ -34,6 +37,7 @@ var MatrixBlog = function(settings) {
             
             for (var j in data.rooms) {
                 if (data.rooms[j].room_id == self.roomId) {
+                    // process each message chunk from inital state
                     for (var i in data.rooms[j].messages.chunk) {
                         self.processChunk(data.rooms[0].messages.chunk[i]);
                     }
@@ -42,6 +46,7 @@ var MatrixBlog = function(settings) {
                     console.log("Ignoring room id: " + data.rooms[j].room_id);
                 }
             }
+            // fetch presence to create a nick list on top
             for (var i in data.presence) {
                 self.processPresence(data.presence[i]);
             }
@@ -50,6 +55,7 @@ var MatrixBlog = function(settings) {
     });
 }
 
+// split up @blog:h4x.no into nick and host so we can style it
 MatrixBlog.prototype.getUserInfo = function(user_id) {
     return {
         host: user_id.split(":")[1],
@@ -57,12 +63,14 @@ MatrixBlog.prototype.getUserInfo = function(user_id) {
     };
 }
 
+// make a locale time string from a timestamp
 MatrixBlog.prototype.makeTimeString = function(ts) {
     var ret = new Date();
     ret.setTime(ts);
-    return ret.toLocaleString('nb-NO');
+    return ret.toLocaleString(this.settings.locale);
 }
 
+// process presence data
 MatrixBlog.prototype.processPresence = function(person) {
     if (person.type == 'm.presence') {
         var mxc = person.content.avatar_url;
@@ -82,6 +90,7 @@ MatrixBlog.prototype.processPresence = function(person) {
     }
 };
 
+// process message chunk
 MatrixBlog.prototype.processChunk = function(message) {
     if (message.user_id != this.settings.userId) {
         if (message.type == 'm.room.message') {
@@ -119,6 +128,7 @@ MatrixBlog.prototype.processChunk = function(message) {
     }
 };
 
+// wait for message events
 MatrixBlog.prototype.waitForMessage = function() {
     var self = this;
     this.client.eventStream(this.lastId, function (err, data) {
