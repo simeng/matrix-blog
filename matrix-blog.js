@@ -19,7 +19,7 @@ var MatrixBlog = function(settings) {
     this.$posts = null;
     this.$people = null;
 
-    this.client.joinRoom(this.settings.room, function (err, data) {
+    this.client.resolveRoomAlias(this.settings.room, function (err, data) {
         self.$posts = $("ul.posts");
         self.$people = $("ul.people");
         self.roomId = data.room_id;
