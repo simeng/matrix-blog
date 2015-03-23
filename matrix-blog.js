@@ -16,17 +16,20 @@ var MatrixBlog = function(settings) {
 
     this.roomId = null;
     this.lastId = null;
-    this.$posts = null;
-    this.$people = null;
+    this.$posts = $('<ul class="posts">');
+    this.$people = $('<ul class="people">');
 
     this.client.resolveRoomAlias(this.settings.room, function (err, data) {
-        self.$posts = $("ul.posts");
-        self.$people = $("ul.people");
+        var $root = $(self.settings.selector);
         self.roomId = data.room_id;
 
         // client.sendTyping(roomId, true, 5000, function (err, data) {})
 
         self.client.initialSync(50, function (err, data) {
+            $root.empty();
+            $root.append(self.$people);
+            $root.append(self.$posts);
+
             self.lastId = data.end;
             
             for (var j in data.rooms) {

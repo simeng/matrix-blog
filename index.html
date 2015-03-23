@@ -59,12 +59,11 @@ time {
         </style>
     </head>
     <body>
-        <ul class="people">
-        </ul>
-        <ul class="posts">
-        </ul>
+        <div id="chat">Loading...</div>
+        <a href="https://github.com/simeng/matrix-blog">Matrix Blog</a> - a test app by @simeng:h4x.no for using <a href="http://matrix.org/">Matrix</a> as a Blog-like system.
         <script type="text/javascript">
             var blog = new MatrixBlog({
+                selector: '#chat',
                 room: '#blog:h4x.no',
                 userId: '@blog:h4x.no',
                 accessToken: 'QGJsb2c6aDR4Lm5v.LWtEDByFJNhlMCagjY',
