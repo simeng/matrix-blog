@@ -28,8 +28,16 @@ var MatrixBlog = function(settings) {
 
         self.client.initialSync(50, function (err, data) {
             self.lastId = data.end;
-            for (var i in data.rooms[0].messages.chunk) {
-                self.processChunk(data.rooms[0].messages.chunk[i]);
+            
+            for (var j in data.rooms) {
+                if (data.rooms[j].room_id == self.roomId) {
+                    for (var i in data.rooms[j].messages.chunk) {
+                        self.processChunk(data.rooms[0].messages.chunk[i]);
+                    }
+                }
+                else {
+                    console.log("Ignoring room id: " + data.rooms[j].room_id);
+                }
             }
             for (var i in data.presence) {
                 self.processPresence(data.presence[i]);
