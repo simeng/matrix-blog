@@ -123,7 +123,7 @@ MatrixBlog.prototype.processChunk = function(message) {
             }
             var $time = $("<time>").text(this.makeTimeString(message.origin_server_ts));
             $item.append($time);
-            this.$posts.append($item);
+            this.$posts.prepend($item);
         }
     }
 };
