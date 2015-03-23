@@ -1,0 +1,75 @@
+<html>
+    <head>
+        <title>Matrix blog v.1</title>
+        <link href='http://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
+        <script src="../js/jquery-1.4.2.min.js"></script>
+        <script src="lib/matrix.js"></script>
+        <script src="lib/browser-request.js"></script>
+        <script src="matrix-blog.js"></script>
+        <style type="text/css">
+body {
+    background: #888;
+    font-family: 'Roboto', sans-serif;
+}
+ul {
+    padding-left: 0;
+    list-style-type: none;
+}
+ul li {
+    overflow: auto;
+    word-wrap: break-word;
+}
+ul.people li {
+    display: inline-block;
+    margin-right: 3px;
+}
+ul.posts li {
+    background: rgba(255, 255, 255, 128);
+    border-radius: 3px;
+    padding: 5px 15px;
+    margin: 5px 0;
+    max-width: 450px;
+}
+h4 {
+    margin: 0 0 13px 0;
+    font-size: 12px;
+}
+time {
+    color: #888;
+    float: right;
+    font-size: 9px;
+}
+.emote .body:before {
+    content: "*";
+    margin-right: 5px;
+}
+.emote .body {
+    color: #44d;
+}
+.host:before {
+    content: ":";
+    color: #888;
+}
+.nick:before {
+    content: "@";
+    color: #888;
+}
+.nick {
+}
+        </style>
+    </head>
+    <body>
+        <ul class="people">
+        </ul>
+        <ul class="posts">
+        </ul>
+        <script type="text/javascript">
+            var blog = new MatrixBlog({
+                room: '#blog:h4x.no',
+                userId: '@blog:h4x.no',
+                accessToken: 'QGJsb2c6aDR4Lm5v.LWtEDByFJNhlMCagjY',
+                homeServer: 'https://h4x.no'
+            });
+        </script>
+    </body>
+</html>
