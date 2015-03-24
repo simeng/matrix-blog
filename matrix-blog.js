@@ -82,7 +82,8 @@ MatrixBlog.prototype.processPresence = function(person) {
         }
         else {
             $item = $("<li>");
-            $item.attr("data-user-id", person.user_id);
+            $item.attr("data-user-id", person.content.user_id);
+            $item.attr("data-updated", (new Date).getTime());
             var $img = $("<img>").attr("src", url);
             $item.append($img);
             this.$people.append($item);
