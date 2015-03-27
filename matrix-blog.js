@@ -104,13 +104,6 @@ MatrixBlog.prototype.processPresence = function(person) {
 MatrixBlog.prototype.processChunk = function(message) {
     if (message.user_id != this.settings.userId) {
         if (message.type == 'm.room.message') {
-            if (this.last) {
-                console.log(!this.last);
-                console.log(this.last.userId != message.user_id);
-                console.log(this.last.ts + 3600000 > message.origin_server_ts);
-                console.log(this.last.ts);
-                console.log(message.origin_server_ts);
-            }
             if (!this.last || this.last.userId != message.user_id ||
                     message.origin_server_ts > this.last.ts + 3600000) {
                 var $item = $("<li>");
@@ -119,6 +112,8 @@ MatrixBlog.prototype.processChunk = function(message) {
                 var info = this.getUserInfo(message.user_id);
                 $user.append($('<span class="nick">').text(info.nick));
                 $user.append($('<span class="host">').text(info.host));
+                var $time = $("<time>").text(this.makeTimeString(message.origin_server_ts));
+                $item.append($time);
             }
             else {
                 var $item = $("ul.posts li:first");
@@ -144,8 +139,6 @@ MatrixBlog.prototype.processChunk = function(message) {
                 var body = $('<div class="body">').text(message.user_id + " " + message.content.body);
                 $item.append(body);
             }
-            var $time = $("<time>").text(this.makeTimeString(message.origin_server_ts));
-            $item.append($time);
             this.$posts.prepend($item);
             this.last = {
                 userId: message.user_id,
