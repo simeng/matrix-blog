@@ -6,6 +6,7 @@ var MatrixBlog = function(settings) {
     // assign the global request module from browser-request.js
     matrixcs.request(request);
 
+    this.last = null;
     this.settings = settings;
     this.settings.locale = this.settings.locale || 'nb-NO';
     this.client = matrixcs.createClient({
@@ -16,7 +17,7 @@ var MatrixBlog = function(settings) {
     });
 
     this.roomId = null;
-    this.lastId = null;
+    this.endKey = null;
     this.$posts = $('<ul class="posts">');
     this.$people = $('<ul class="people">');
 
@@ -33,8 +34,6 @@ var MatrixBlog = function(settings) {
             $root.append(self.$people);
             $root.append(self.$posts);
 
-            self.lastId = data.end;
-            
             for (var j in data.rooms) {
                 if (data.rooms[j].room_id == self.roomId) {
                     // process each message chunk from inital state
@@ -50,6 +49,7 @@ var MatrixBlog = function(settings) {
             for (var i in data.presence) {
                 self.processPresence(data.presence[i]);
             }
+            self.endKey = data.end;
             self.waitForMessage();
         });
     });
@@ -67,14 +67,23 @@ MatrixBlog.prototype.getUserInfo = function(user_id) {
 MatrixBlog.prototype.makeTimeString = function(ts) {
     var ret = new Date();
     ret.setTime(ts);
-    return ret.toLocaleString(this.settings.locale);
+    var options = { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        day: 'numeric',
+        month: 'short'
+    };
+    if (ret.getMonth() <= 1 || ret.getMonth() >= 12) {
+        options.year = 'numeric';
+    }
+    return ret.toLocaleString(this.settings.locale, options);
 }
 
 // process presence data
 MatrixBlog.prototype.processPresence = function(person) {
     if (person.type == 'm.presence') {
         var mxc = person.content.avatar_url;
-        var url = this.client.getHttpUriForMxc(mxc, 50, 50, "crop");
+        var url = this.client.getHttpUriForMxc(mxc, 32, 32, "crop");
         
         var $item = this.$people.find("[data-user-id=" + person.user_id);
         if ($item.length > 0) {
@@ -95,12 +104,25 @@ MatrixBlog.prototype.processPresence = function(person) {
 MatrixBlog.prototype.processChunk = function(message) {
     if (message.user_id != this.settings.userId) {
         if (message.type == 'm.room.message') {
-            var $item = $("<li>");
+            if (this.last) {
+                console.log(!this.last);
+                console.log(this.last.userId != message.user_id);
+                console.log(this.last.ts + 3600000 > message.origin_server_ts);
+                console.log(this.last.ts);
+                console.log(message.origin_server_ts);
+            }
+            if (!this.last || this.last.userId != message.user_id ||
+                    message.origin_server_ts > this.last.ts + 3600000) {
+                var $item = $("<li>");
 
-            var $user = $('<h4 class="user">');
-            var info = this.getUserInfo(message.user_id);
-            $user.append($('<span class="nick">').text(info.nick));
-            $user.append($('<span class="host">').text(info.host));
+                var $user = $('<h4 class="user">');
+                var info = this.getUserInfo(message.user_id);
+                $user.append($('<span class="nick">').text(info.nick));
+                $user.append($('<span class="host">').text(info.host));
+            }
+            else {
+                var $item = $("ul.posts li:first");
+            }
 
             if (message.content.msgtype == 'm.text') {
                 $item.addClass('text');
@@ -125,6 +147,10 @@ MatrixBlog.prototype.processChunk = function(message) {
             var $time = $("<time>").text(this.makeTimeString(message.origin_server_ts));
             $item.append($time);
             this.$posts.prepend($item);
+            this.last = {
+                userId: message.user_id,
+                ts: message.origin_server_ts
+            };
         }
     }
 };
@@ -132,8 +158,8 @@ MatrixBlog.prototype.processChunk = function(message) {
 // wait for message events
 MatrixBlog.prototype.waitForMessage = function() {
     var self = this;
-    this.client.eventStream(this.lastId, function (err, data) {
-        self.lastId = data.end;
+    this.client.eventStream(this.endKey, function (err, data) {
+        self.endKey = data.end;
         for (var i in data.chunk) {
             self.processChunk(data.chunk[i]);
         }
