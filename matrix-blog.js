@@ -9,6 +9,7 @@ var MatrixBlog = function(settings) {
     this.last = null;
     this.settings = settings;
     this.settings.locale = this.settings.locale || 'nb-NO';
+    this.settings.groupPostDuration = this.settings.groupPostDuration || 600;
     this.client = matrixcs.createClient({
         baseUrl: settings.homeServer,
         // Can be removed in future when public channels can be read without it
@@ -105,7 +106,7 @@ MatrixBlog.prototype.processChunk = function(message) {
     if (message.user_id != this.settings.userId) {
         if (message.type == 'm.room.message') {
             if (!this.last || this.last.userId != message.user_id ||
-                    message.origin_server_ts > this.last.ts + 3600000) {
+                    message.origin_server_ts > this.last.ts + this.settings.groupPostDuration * 1000) {
                 var $item = $("<li>");
 
                 var $user = $('<h4 class="user">');
