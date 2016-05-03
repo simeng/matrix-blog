@@ -20,16 +20,11 @@ var MatrixBlog = function(settings) {
     this.client.getRoomIdForAlias(this.settings.room, function (err, data) {
         var $root = $(self.settings.selector);
         self.roomId = data.room_id;
-        console.log("Found room: " + self.roomId);
 
         // client.sendTyping(roomId, true, 5000, function (err, data) {})
 
         // fetch the last 50 events from our room as inital state
         self.client.on('Room.timeline', function (evt, room, toStartOfTimeline) {
-            $root.empty();
-            $root.append(self.$people);
-            $root.append(self.$posts);
-
             if (room.roomId == self.roomId) {
                 self.processChunk(evt);
             }
@@ -37,18 +32,21 @@ var MatrixBlog = function(settings) {
                 console.log("Ignoring room id: " + data.rooms[j].room_id);
             }
 
-            // fetch presence to create a nick list on top
-            for (var i in data.presence) {
-                self.processPresence(data.presence[i]);
-            }
             self.endKey = data.end;
-            self.waitForMessage();
+        });
+
+        self.client.on('User.presence', function (evt, user) {
+            self.processPresence(evt, user);
         });
 
         self.client.registerGuest({}, function (err, data) {
             self.client._http.opts.accessToken = data.access_token;
             self.client.credentials.userId = data.user_id;
-            console.log(data, err);
+
+            $root.empty();
+            $root.append(self.$people);
+            $root.append(self.$posts);
+
             self.client.peekInRoom(self.roomId);
         });
     });
@@ -79,21 +77,30 @@ MatrixBlog.prototype.makeTimeString = function(ts) {
 }
 
 // process presence data
-MatrixBlog.prototype.processPresence = function(person) {
-    if (person.type == 'm.presence') {
-        var mxc = person.content.avatar_url;
-        var url = this.client.getHttpUriForMxc(mxc, 32, 32, "crop");
+MatrixBlog.prototype.processPresence = function(evt, user) {
+    if (evt.event.type == 'm.presence') {
+        var url = null;
+        if (user.avatarUrl) {
+            var mxc = user.avatarUrl;
+            url = this.client.mxcUrlToHttp(mxc, 32, 32, "crop");
+        }
         
-        var $item = this.$people.find("[data-user-id=" + person.user_id);
+        var $item = this.$people.find("[data-user-id=\"" + user.userId + "\"");
         if ($item.length > 0) {
             $item = $($item[0]);
         }
         else {
             $item = $("<li>");
-            $item.attr("data-user-id", person.content.user_id);
+            $item.attr("data-user-id", user.userId);
             $item.attr("data-updated", (new Date).getTime());
-            var $img = $("<img>").attr("src", url);
-            $item.append($img);
+            if (url) {
+                var $img = $("<img>").attr("src", url);
+                $item.append($img);
+            }
+            else {
+                var $dummy = $("<div>").text(user.userId);
+                $item.append($dummy);
+            }
             this.$people.append($item);
         }
     }
@@ -126,7 +133,7 @@ MatrixBlog.prototype.processChunk = function(message) {
         else if (message.event.content.msgtype == 'm.image') {
             $item.addClass('image');
             var mxc = message.event.content.url;
-            var url = this.client.getHttpUriForMxc(mxc, 400, 400);
+            var url = this.client.mxcUrlToHttp(mxc, 400, 400, "scale");
 
             var $img = $("<img>").attr("src", url);
             $item.append($user);
@@ -145,14 +152,3 @@ MatrixBlog.prototype.processChunk = function(message) {
     }
 };
 
-// wait for message events
-MatrixBlog.prototype.waitForMessage = function() {
-    var self = this;
-    this.client.eventStream(this.endKey, function (err, data) {
-        self.endKey = data.end;
-        for (var i in data.chunk) {
-            self.processChunk(data.chunk[i]);
-        }
-        self.waitForMessage();
-    });
-};
