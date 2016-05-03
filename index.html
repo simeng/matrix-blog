@@ -3,8 +3,7 @@
         <title>Matrix blog v.1</title>
         <link href='http://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
         <script src="../js/jquery-1.4.2.min.js"></script>
-        <script src="lib/matrix.js"></script>
-        <script src="lib/browser-request.js"></script>
+        <script src="lib/browser-matrix-0.5.2.min.js"></script>
         <script src="matrix-blog.js"></script>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <style type="text/css">
@@ -79,10 +78,8 @@ time {
         <script type="text/javascript">
             var blog = new MatrixBlog({
                 selector: '#chat',
-                room: '#blog:h4x.no',
-                userId: '@blog:h4x.no',
-                accessToken: 'MDAxNGxvY2F0aW9uIGg0eC5ubwowMDEzaWRlbnRpZmllciBrZXkKMDAxMGNpZCBnZW4gPSAxCjAwMWZjaWQgdXNlcl9pZCA9IEBibG9nOmg0eC5ubwowMDE2Y2lkIHR5cGUgPSBhY2Nlc3MKMDAxZGNpZCB0aW1lIDwgMTQ0OTA3ODg3MzQ0MgowMDJmc2lnbmF0dXJlIAtvvG-9YkRYodxaQEqUQGgWrbww94i3gns2acn58b4uCg',
-                homeServer: 'https://h4x.no'
+                room: '#blog:irc.h4x.no',
+                homeServer: 'https://irc.h4x.no:8448'
             });
         </script>
     </body>

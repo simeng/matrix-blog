@@ -3,18 +3,12 @@
 var MatrixBlog = function(settings) {
     var self = this;
     
-    // assign the global request module from browser-request.js
-    matrixcs.request(request);
-
     this.last = null;
     this.settings = settings;
     this.settings.locale = this.settings.locale || 'nb-NO';
     this.settings.groupPostDuration = this.settings.groupPostDuration || 600;
     this.client = matrixcs.createClient({
-        baseUrl: settings.homeServer,
-        // Can be removed in future when public channels can be read without it
-        accessToken: settings.accessToken, 
-        userId: this.settings.userId
+        baseUrl: settings.homeServer
     });
 
     this.roomId = null;
@@ -23,35 +17,39 @@ var MatrixBlog = function(settings) {
     this.$people = $('<ul class="people">');
 
     // turn @blog:h4x.no into !AAibyqyZfUWhPUliDe:h4x.no to fetch inital state
-    this.client.resolveRoomAlias(this.settings.room, function (err, data) {
+    this.client.getRoomIdForAlias(this.settings.room, function (err, data) {
         var $root = $(self.settings.selector);
         self.roomId = data.room_id;
+        console.log("Found room: " + self.roomId);
 
         // client.sendTyping(roomId, true, 5000, function (err, data) {})
 
         // fetch the last 50 events from our room as inital state
-        self.client.initialSync(50, function (err, data) {
+        self.client.on('Room.timeline', function (evt, room, toStartOfTimeline) {
             $root.empty();
             $root.append(self.$people);
             $root.append(self.$posts);
 
-            for (var j in data.rooms) {
-                if (data.rooms[j].room_id == self.roomId) {
-                    // process each message chunk from inital state
-                    for (var i in data.rooms[j].messages.chunk) {
-                        self.processChunk(data.rooms[0].messages.chunk[i]);
-                    }
-                }
-                else {
-                    console.log("Ignoring room id: " + data.rooms[j].room_id);
-                }
+            if (room.roomId == self.roomId) {
+                self.processChunk(evt);
             }
+            else {
+                console.log("Ignoring room id: " + data.rooms[j].room_id);
+            }
+
             // fetch presence to create a nick list on top
             for (var i in data.presence) {
                 self.processPresence(data.presence[i]);
             }
             self.endKey = data.end;
             self.waitForMessage();
+        });
+
+        self.client.registerGuest({}, function (err, data) {
+            self.client._http.opts.accessToken = data.access_token;
+            self.client.credentials.userId = data.user_id;
+            console.log(data, err);
+            self.client.peekInRoom(self.roomId);
         });
     });
 }
@@ -103,49 +101,47 @@ MatrixBlog.prototype.processPresence = function(person) {
 
 // process message chunk
 MatrixBlog.prototype.processChunk = function(message) {
-    if (message.user_id != this.settings.userId) {
-        if (message.type == 'm.room.message') {
-            if (!this.last || this.last.userId != message.user_id ||
-                    message.origin_server_ts > this.last.ts + this.settings.groupPostDuration * 1000) {
-                var $item = $("<li>");
+    if (message.getType() == 'm.room.message') {
+        if (!this.last || this.last.userId != message.getSender() ||
+                message.getTs() > this.last.ts + this.settings.groupPostDuration * 1000) {
+            var $item = $("<li>");
 
-                var $user = $('<h4 class="user">');
-                var info = this.getUserInfo(message.user_id);
-                $user.append($('<span class="nick">').text(info.nick));
-                $user.append($('<span class="host">').text(info.host));
-                var $time = $("<time>").text(this.makeTimeString(message.origin_server_ts));
-                $item.append($time);
-            }
-            else {
-                var $item = $("ul.posts li:first");
-            }
-
-            if (message.content.msgtype == 'm.text') {
-                $item.addClass('text');
-                var $body = $('<div class="body">').text(message.content.body);
-                $item.append($user);
-                $item.append($body);
-            }
-            else if (message.content.msgtype == 'm.image') {
-                $item.addClass('image');
-                var mxc = message.content.url;
-                var url = this.client.getHttpUriForMxc(mxc, 400, 400);
-
-                var $img = $("<img>").attr("src", url);
-                $item.append($user);
-                $item.append($img);
-            }
-            else if (message.content.msgtype == 'm.emote') {
-                $item.addClass('emote');
-                var body = $('<div class="body">').text(message.user_id + " " + message.content.body);
-                $item.append(body);
-            }
-            this.$posts.prepend($item);
-            this.last = {
-                userId: message.user_id,
-                ts: message.origin_server_ts
-            };
+            var $user = $('<h4 class="user">');
+            var info = this.getUserInfo(message.getSender());
+            $user.append($('<span class="nick">').text(info.nick));
+            $user.append($('<span class="host">').text(info.host));
+            var $time = $("<time>").text(this.makeTimeString(message.getTs()));
+            $item.append($time);
         }
+        else {
+            var $item = $("ul.posts li:first");
+        }
+
+        if (message.event.content.msgtype == 'm.text') {
+            $item.addClass('text');
+            var $body = $('<div class="body">').text(message.event.content.body);
+            $item.append($user);
+            $item.append($body);
+        }
+        else if (message.event.content.msgtype == 'm.image') {
+            $item.addClass('image');
+            var mxc = message.event.content.url;
+            var url = this.client.getHttpUriForMxc(mxc, 400, 400);
+
+            var $img = $("<img>").attr("src", url);
+            $item.append($user);
+            $item.append($img);
+        }
+        else if (message.event.content.msgtype == 'm.emote') {
+            $item.addClass('emote');
+            var body = $('<div class="body">').text(message.getSender() + " " + message.event.content.body);
+            $item.append(body);
+        }
+        this.$posts.prepend($item);
+        this.last = {
+            userId: message.getSender(),
+            ts: message.getTs()
+        };
     }
 };
 
